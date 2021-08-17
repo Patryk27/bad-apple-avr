@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -ex
+
+avr-gcc -mmcu=atmega328p -Wall -Os -o main.elf main.c
+avr-objcopy -j .text -j .data -O ihex main.elf main.hex
+sudo avrdude -p m328p -c usbasp -e -V -U flash:w:main.hex
