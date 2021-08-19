@@ -6,3 +6,5 @@ edition = "2018"
 [dependencies]
 glob = "0.3"
 image = "0.23"
+indicatif = { version = "0.16", features = ["rayon"] }
+rayon = "1.5"

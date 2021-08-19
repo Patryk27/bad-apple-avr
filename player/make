@@ -2,6 +2,6 @@
 
 set -ex
 
-avr-gcc -mmcu=atmega328p -Wall -Os -o main.elf main.c
-avr-objcopy -j .text -j .data -O ihex main.elf main.hex
-sudo avrdude -p m328p -c usbasp -e -V -U flash:w:main.hex
+avr-gcc -mmcu=atmega328p -Wall -Os -o /tmp/main.elf main.c
+avr-size /tmp/main.elf
+sudo avrdude -p m328p -c usbasp -e -V -U flash:w:/tmp/main.elf
