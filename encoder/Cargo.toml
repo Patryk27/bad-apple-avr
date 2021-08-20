@@ -1,10 +1,11 @@
 [package]
-name = "codec"
+name = "encoder"
 version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-glob = "0.3"
-image = "0.23"
+anyhow = "1.0"
 indicatif = { version = "0.16", features = ["rayon"] }
 rayon = "1.5"
+
+encoder-lib = { path = "../encoder-lib" }

@@ -26,7 +26,7 @@ void panic() {
 
 /* ----- */
 
-static volatile uint8_t lcd_fb[504] = { 0 };
+volatile uint8_t lcd_fb[504] = { 0 };
 
 void lcd_write(uint8_t val, uint8_t as_data) {
   PORTC &= ~_BV(LCD_SCE);
@@ -113,14 +113,14 @@ uint8_t lcd_get(uint16_t x, uint16_t y) {
 /* ----- */
 
 volatile uint16_t video_pos = (uint16_t) video;
-static volatile uint8_t video_packet[512] = { 0 };
+volatile uint8_t video_packet[512] = { 0 };
 volatile uint16_t video_packet_len = 0;
-volatile uint8_t video_block_width = 0;
-volatile uint8_t video_block_height = 0;
-volatile uint8_t video_width = 0;
-volatile uint8_t video_height = 0;
-volatile uint8_t video_xblocks = 0;
-volatile uint8_t video_yblocks = 0;
+volatile uint16_t video_block_width = 0;
+volatile uint16_t video_block_height = 0;
+volatile uint16_t video_width = 0;
+volatile uint16_t video_height = 0;
+volatile uint16_t video_xblocks = 0;
+volatile uint16_t video_yblocks = 0;
 
 uint8_t video_peek_u8() {
   return pgm_read_byte(video_pos);
@@ -140,7 +140,29 @@ uint16_t video_read_u16() {
   return val;
 }
 
-void video_process_packet_meta() {
+void video_inflate_packet(uint16_t len) {
+  uint16_t pos = 0;
+
+  while (pos < len) {
+    uint8_t b1 = video_read_u8();
+    uint8_t b2 = video_peek_u8();
+
+    if (b1 == b2) {
+      video_read_u8();
+      uint8_t len = video_read_u8();
+
+      while (len--) {
+        video_packet[pos++] = b1;
+      }
+    } else {
+      video_packet[pos++] = b1;
+    }
+  }
+}
+
+void video_process_packet_init() {
+  video_inflate_packet(4);
+
   video_block_width = video_packet[0];
   video_block_height = video_packet[1];
   video_width = video_packet[2];
@@ -150,6 +172,8 @@ void video_process_packet_meta() {
 }
 
 void video_process_packet_iframe() {
+  video_inflate_packet((video_width * video_height + 7) / 8);
+
   uint16_t idx = 0;
 
   for (uint8_t bx = 0; bx < video_xblocks; bx += 1) {
@@ -177,6 +201,8 @@ void video_process_packet_dframe() {
 }
 
 void video_process_packet_pframe() {
+  video_inflate_packet((video_width * video_height + 7) / 8);
+
   uint16_t idx = 0;
 
   for (uint8_t bx = 0; bx < video_xblocks; bx += 1) {
@@ -207,35 +233,11 @@ uint8_t video_process_packet() {
     return 0;
   }
 
-  // Read packet type
   uint8_t ty = video_read_u8();
 
-  // Read packet length
-  video_packet_len = video_read_u16();
-
-  // Read packet body
-  uint16_t pos = 0;
-
-  while (pos < video_packet_len) {
-    uint8_t b1 = video_read_u8();
-    uint8_t b2 = video_peek_u8();
-
-    if (b1 == b2) {
-      video_read_u8();
-      uint8_t len = video_read_u8();
-
-      while (len--) {
-        video_packet[pos++] = b1;
-      }
-    } else {
-      video_packet[pos++] = b1;
-    }
-  }
-
-  // Dispatch
   switch (ty) {
     case 0:
-      video_process_packet_meta();
+      video_process_packet_init();
       return 1;
 
     case 1:
@@ -247,7 +249,7 @@ uint8_t video_process_packet() {
       return 1;
 
     case 3:
-      video_process_packet_pframe();
+      /* video_process_packet_pframe(); */
       return 1;
 
     default:

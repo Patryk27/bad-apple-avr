@@ -15,6 +15,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
 
 [[package]]
+name = "anyhow"
+version = "1.0.43"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28ae2b3dec75a406790005a200b1bd89785afc02517a00ca99ecfe093ee9e6cf"
+
+[[package]]
 name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -43,16 +49,6 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
-name = "codec"
-version = "0.1.0"
-dependencies = [
- "glob",
- "image",
- "indicatif",
- "rayon",
-]
 
 [[package]]
 name = "color_quant"
@@ -147,6 +143,25 @@ name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
+
+[[package]]
+name = "encoder"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "encoder-lib",
+ "indicatif",
+ "rayon",
+]
+
+[[package]]
+name = "encoder-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "glob",
+ "image",
+]
 
 [[package]]
 name = "gif"
