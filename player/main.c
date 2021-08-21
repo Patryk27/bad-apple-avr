@@ -100,21 +100,20 @@ void lcd_set(uint16_t x, uint16_t y, uint8_t pixel) {
   volatile uint8_t *p = &lcd_fb[x + y / 8 * 84];
 
   if (pixel) {
-    *p &= ~_BV(y % 8);
-  } else {
     *p |= _BV(y % 8);
+  } else {
+    *p &= ~_BV(y % 8);
   }
 }
 
 uint8_t lcd_get(uint16_t x, uint16_t y) {
-  return (lcd_fb[x + y / 8 * 84] & _BV(y % 8)) == 0;
+  return (lcd_fb[x + y / 8 * 84] & _BV(y % 8));
 }
 
 /* ----- */
 
 volatile uint16_t video_pos = (uint16_t) video;
 volatile uint8_t video_packet[512] = { 0 };
-volatile uint16_t video_packet_len = 0;
 volatile uint16_t video_block_width = 0;
 volatile uint16_t video_block_height = 0;
 volatile uint16_t video_width = 0;
@@ -146,27 +145,24 @@ void video_inflate_packet(uint16_t len) {
   while (pos < len) {
     uint8_t b1 = video_read_u8();
     uint8_t b2 = video_peek_u8();
+    uint16_t run = 1;
 
     if (b1 == b2) {
       video_read_u8();
-      uint8_t len = video_read_u8();
+      run += video_read_u8();
+    }
 
-      while (len--) {
-        video_packet[pos++] = b1;
-      }
-    } else {
+    for (uint16_t i = 0; i < run; i += 1) {
       video_packet[pos++] = b1;
     }
   }
 }
 
 void video_process_packet_init() {
-  video_inflate_packet(4);
-
-  video_block_width = video_packet[0];
-  video_block_height = video_packet[1];
-  video_width = video_packet[2];
-  video_height = video_packet[3];
+  video_block_width = video_read_u8();
+  video_block_height = video_read_u8();
+  video_width = video_read_u8();
+  video_height = video_read_u8();
   video_xblocks = video_width / video_block_width;
   video_yblocks = video_height / video_block_height;
 }
@@ -189,7 +185,7 @@ void video_process_packet_iframe() {
           uint8_t pixel = video_packet[idx / 8] & _BV(idx % 8);
           idx += 1;
 
-          lcd_set(video_width - x, video_height - y, pixel);
+          lcd_set(video_width - x, video_height - y, !pixel);
         }
       }
     }
@@ -201,7 +197,8 @@ void video_process_packet_dframe() {
 }
 
 void video_process_packet_pframe() {
-  video_inflate_packet((video_width * video_height + 7) / 8);
+  uint16_t len = video_read_u16();
+  video_inflate_packet(len);
 
   uint16_t idx = 0;
 
@@ -213,14 +210,19 @@ void video_process_packet_pframe() {
       uint8_t y0 = by * video_block_height;
       uint8_t y1 = y0 + video_block_height;
 
-      for (uint8_t x = x0; x < x1; x += 1) {
-        for (uint8_t y = y0; y < y1; y += 1) {
-          uint8_t toggle = video_packet[idx / 8] & _BV(idx % 8);
-          idx += 1;
+      uint8_t block_dirty = video_packet[idx / 8] & _BV(idx % 8);
+      idx += 1;
 
-          if (toggle) {
-            uint8_t pixel = lcd_get(video_width - x, video_height - y);
-            lcd_set(video_width - x, video_height - y, !pixel);
+      if (block_dirty) {
+        for (uint8_t x = x0; x < x1; x += 1) {
+          for (uint8_t y = y0; y < y1; y += 1) {
+            uint8_t pixel_dirty = video_packet[idx / 8] & _BV(idx % 8);
+            idx += 1;
+
+            if (pixel_dirty) {
+              uint8_t pixel = lcd_get(video_width - x, video_height - y);
+              lcd_set(video_width - x, video_height - y, !pixel);
+            }
           }
         }
       }
@@ -249,7 +251,7 @@ uint8_t video_process_packet() {
       return 1;
 
     case 3:
-      /* video_process_packet_pframe(); */
+      video_process_packet_pframe();
       return 1;
 
     default:
@@ -264,6 +266,7 @@ int main(void) {
 
   while (video_process_packet()) {
     lcd_render();
+    _delay_ms(300);
   }
 
   while (1) {

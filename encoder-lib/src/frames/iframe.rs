@@ -1,17 +1,20 @@
-use crate::prelude::*;
+use super::{compress, serialize_bitset};
+use crate::*;
 
 pub struct IFrame {
     body: Vec<u8>,
 }
 
 impl IFrame {
-    pub fn build(curr: &Image) -> Self {
-        Self {
-            body: super::make_bitset(curr.pixels()),
-        }
-    }
-
     pub fn serialize(self) -> Vec<u8> {
         self.body
+    }
+}
+
+impl Frame for IFrame {
+    fn build(ctxt: FrameCtxt<'_>) -> Option<Self> {
+        Some(Self {
+            body: compress(serialize_bitset(ctxt.curr.pixels())),
+        })
     }
 }

@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::*;
 
 #[derive(Clone, Debug)]
 pub struct Params {
@@ -6,7 +6,7 @@ pub struct Params {
     pub(crate) block_height: u8,
     pub(crate) video_width: u8,
     pub(crate) video_height: u8,
-    pub(crate) limit: u16,
+    pub(crate) size_limit: u16,
 }
 
 impl Params {
@@ -15,7 +15,7 @@ impl Params {
         block_height: u8,
         video_width: u8,
         video_height: u8,
-        limit: u16,
+        size_limit: u16,
     ) -> Result<Self> {
         ensure!(video_width % block_width == 0);
         ensure!(video_height % block_height == 0);
@@ -25,8 +25,12 @@ impl Params {
             block_height,
             video_width,
             video_height,
-            limit,
+            size_limit,
         })
+    }
+
+    pub fn size_limit(&self) -> u16 {
+        self.size_limit
     }
 
     pub(crate) fn xblocks(&self) -> u8 {
@@ -53,7 +57,7 @@ impl Params {
         self.block_y0(by) + self.block_height
     }
 
-    pub(crate) fn block_idx(&self, bx: u8, by: u8) -> u8 {
-        bx * self.yblocks() + by
+    pub(crate) fn block_idx(&self, bx: u8, by: u8) -> usize {
+        (bx as usize) * (self.yblocks() as usize) + (by as usize)
     }
 }

@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Image {
@@ -18,8 +18,8 @@ impl Image {
         Self { blocks }
     }
 
-    pub fn block(&self, idx: u8) -> &Block {
-        &self.blocks[idx as usize]
+    pub fn block(&self, idx: usize) -> &Block {
+        &self.blocks[idx]
     }
 
     pub fn pixels(&self) -> impl Iterator<Item = bool> + '_ {

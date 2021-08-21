@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::*;
 use ::image::Pixel;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

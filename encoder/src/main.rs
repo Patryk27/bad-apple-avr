@@ -4,7 +4,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 fn main() {
     let source = Source::from_dir("../video").expect("Couldn't load video");
-    let images = source.images().count();
+    let image_count = source.images().count();
     let params_sets = prepare_params_sets();
     let results = perform_encodings(source, params_sets);
 
@@ -12,24 +12,33 @@ fn main() {
         results
             .into_iter()
             .max_by(|(_, a, _), (_, b, _)| {
-                let a = a.frames;
-                let b = b.frames;
+                let a1 = a.frames;
+                let b1 = b.frames;
 
-                a.cmp(&b)
+                let a2 = a.bytes;
+                let b2 = b.bytes;
+
+                a1.cmp(&b1).then_with(|| b2.cmp(&a2))
             })
             .unwrap()
     };
 
     eprintln!("{:#?}", params);
     eprintln!("{:#?}", stats);
-    eprintln!("(encoded {} frames out of {})", stats.frames, images);
+    eprintln!(
+        "(encoded {} frames out of {} = {}% => ~{} bytes per frame)",
+        stats.frames,
+        image_count,
+        100 * stats.frames / image_count,
+        (params.size_limit() as usize) / stats.frames,
+    );
     println!("{}", code);
 }
 
 fn prepare_params_sets() -> Vec<Params> {
     let video_width = 84;
     let video_height = 48;
-    let max_code_size = 30050;
+    let max_code_size = 31200;
 
     let mut params_sets = Vec::new();
 

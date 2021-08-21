@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::*;
 use ::image::io::Reader as ImageReader;
 pub use std::path::Path;
 

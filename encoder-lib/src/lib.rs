@@ -1,4 +1,5 @@
 mod block;
+mod frame;
 mod frames;
 mod image;
 mod packet;
@@ -6,13 +7,10 @@ mod params;
 mod source;
 mod stats;
 
-mod prelude {
-    pub(crate) use super::*;
-}
-
-use self::{block::*, frames::*, image::*, packet::*};
+use self::{block::*, frame::*, frames::*, image::*, packet::*};
 pub use ::image::RgbImage;
 use anyhow::{ensure, Context, Result};
+use std::array;
 
 pub use self::{params::*, source::*, stats::*};
 
@@ -46,35 +44,26 @@ impl<'a> Encoder<'a> {
     pub fn add(&mut self, curr: &RgbImage) -> bool {
         let curr = Image::new(&self.params, curr);
 
-        let candidates = if let Some(prev) = self.prev.take() {
-            if curr == prev {
-                vec![Packet::from(DFrame::build())]
-            } else {
-                vec![
-                    Packet::from(IFrame::build(&curr)),
-                    Packet::from(PaFrame::build(&self.params, &prev, &curr)),
-                    // Packet::from(PbFrame::build(&self.params, &prev, &curr)),
-                    // Packet::from(PcFrame::build(&self.params, &prev, &curr)),
-                    // Packet::from(PdFrame::build(&prev, &curr)),
-                ]
-            }
-        } else {
-            vec![Packet::from(IFrame::build(&curr))]
+        let ctxt = FrameCtxt {
+            params: self.params,
+            prev: self.prev.as_ref(),
+            curr: &curr,
         };
 
-        let packet = candidates
+        let candidates = [
+            IFrame::build_packet(ctxt),
+            DFrame::build_packet(ctxt),
+            PFrame::build_packet(ctxt),
+        ];
+
+        let packet = array::IntoIter::new(candidates)
             .into_iter()
-            .min_by(|a, b| {
-                let a = a.len();
-                let b = b.len();
-
-                a.cmp(&b)
-            })
-            .unwrap();
-
-        self.stats.frames += 1;
+            .flatten()
+            .min_by_key(|a| a.len())
+            .unwrap(); // shouldn't happen as iframes are always present
 
         if self.write(packet).is_ok() {
+            self.stats.frames += 1;
             self.prev = Some(curr);
             true
         } else {
@@ -108,7 +97,7 @@ impl<'a> Encoder<'a> {
         let ty = packet.ty();
         let data = packet.serialize();
 
-        if self.buffer.len() + data.len() > (self.params.limit as usize) {
+        if self.buffer.len() + data.len() > (self.params.size_limit as usize) {
             Err(())
         } else {
             *self.stats.packets.entry(ty).or_default() += 1;
